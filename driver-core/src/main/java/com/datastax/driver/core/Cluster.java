@@ -2002,6 +2002,16 @@ public class Cluster implements Closeable {
             if (logger.isDebugEnabled())
                 logger.debug("Refreshing schema for {}{}", keyspace == null ? "" : keyspace, table == null ? "" : '.' + table);
 
+            maybeRefreshSchemaAndSignal(connection, future, rs, keyspace, table);
+        }
+
+        public void waitForSchemaAgreementAndSignal(final Connection connection, final DefaultResultSetFuture future, final ResultSet rs) {
+            maybeRefreshSchemaAndSignal(connection, future, rs, null, null);
+        }
+
+        private void maybeRefreshSchemaAndSignal(final Connection connection, final DefaultResultSetFuture future, final ResultSet rs, final String keyspace, final String table) {
+            final boolean refreshSchema = (keyspace != null); // if false, only wait for schema agreement
+
             executor.submit(new Runnable() {
                 @Override
                 public void run() {
@@ -2009,13 +2019,18 @@ public class Cluster implements Closeable {
                     try {
                         // Before refreshing the schema, wait for schema agreement so
                         // that querying a table just after having created it don't fail.
-                        schemaInAgreement = ControlConnection.waitForSchemaAgreement(connection, Cluster.Manager.this);
+                        schemaInAgreement = ControlConnection.waitForSchemaAgreement(connection, Manager.this);
                         if (!schemaInAgreement)
                             logger.warn("No schema agreement from live replicas after {} s. The schema may not be up to date on some nodes.", configuration.getProtocolOptions().getMaxSchemaAgreementWaitSeconds());
-                        ControlConnection.refreshSchema(connection, keyspace, table, Cluster.Manager.this, false);
+                        if (refreshSchema)
+                            ControlConnection.refreshSchema(connection, keyspace, table, Manager.this, false);
                     } catch (Exception e) {
-                        logger.error("Error during schema refresh ({}). The schema from Cluster.getMetadata() might appear stale. Asynchronously submitting job to fix.", e.getMessage());
-                        submitSchemaRefresh(keyspace, table);
+                        if (refreshSchema) {
+                            logger.error("Error during schema refresh ({}). The schema from Cluster.getMetadata() might appear stale. Asynchronously submitting job to fix.", e.getMessage());
+                            submitSchemaRefresh(keyspace, table);
+                        } else {
+                            logger.warn("Error while waiting for schema agreement", e);
+                        }
                     } finally {
                         // Always sets the result, but remember if we reached schema agreement
                         rs.getExecutionInfo().setSchemaInAgreement(schemaInAgreement);
@@ -2024,26 +2039,6 @@ public class Cluster implements Closeable {
                 }
             });
         }
-
-        public void waitForSchemaAgreementAndSignal(final Connection connection, final DefaultResultSetFuture future, final ResultSet rs) {
-            executor.submit(new Runnable() {
-                @Override
-                public void run() {
-                    boolean schemaInAgreement = false;
-                    try {
-                        schemaInAgreement = ControlConnection.waitForSchemaAgreement(connection, Cluster.Manager.this);
-                        if (!schemaInAgreement)
-                            logger.warn("No schema agreement from live replicas after {} s. The schema may not be up to date on some nodes.", configuration.getProtocolOptions().getMaxSchemaAgreementWaitSeconds());
-                    } catch (Exception e) {
-                        logger.warn("Error while waiting for schema agreement", e);
-                    } finally {
-                        rs.getExecutionInfo().setSchemaInAgreement(schemaInAgreement);
-                        future.setResult(rs);
-                    }
-                }
-            });
-        }
-
 
         // Called when some message has been received but has been initiated from the server (streamId < 0).
         // This is called on an I/O thread, so all blocking operation must be done on an executor.
