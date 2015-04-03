@@ -2005,12 +2005,12 @@ public class Cluster implements Closeable {
             executor.submit(new Runnable() {
                 @Override
                 public void run() {
-                    boolean reachedSchemaAgreement = false;
+                    boolean schemaInAgreement = false;
                     try {
                         // Before refreshing the schema, wait for schema agreement so
                         // that querying a table just after having created it don't fail.
-                        reachedSchemaAgreement = ControlConnection.waitForSchemaAgreement(connection, Cluster.Manager.this);
-                        if (!reachedSchemaAgreement)
+                        schemaInAgreement = ControlConnection.waitForSchemaAgreement(connection, Cluster.Manager.this);
+                        if (!schemaInAgreement)
                             logger.warn("No schema agreement from live replicas after {} s. The schema may not be up to date on some nodes.", configuration.getProtocolOptions().getMaxSchemaAgreementWaitSeconds());
                         ControlConnection.refreshSchema(connection, keyspace, table, Cluster.Manager.this, false);
                     } catch (Exception e) {
@@ -2018,7 +2018,7 @@ public class Cluster implements Closeable {
                         submitSchemaRefresh(keyspace, table);
                     } finally {
                         // Always sets the result, but remember if we reached schema agreement
-                        rs.getExecutionInfo().setReachedSchemaAgreement(reachedSchemaAgreement);
+                        rs.getExecutionInfo().setSchemaInAgreement(schemaInAgreement);
                         future.setResult(rs);
                     }
                 }
@@ -2029,15 +2029,15 @@ public class Cluster implements Closeable {
             executor.submit(new Runnable() {
                 @Override
                 public void run() {
-                    boolean reachedSchemaAgreement = false;
+                    boolean schemaInAgreement = false;
                     try {
-                        reachedSchemaAgreement = ControlConnection.waitForSchemaAgreement(connection, Cluster.Manager.this);
-                        if (!reachedSchemaAgreement)
+                        schemaInAgreement = ControlConnection.waitForSchemaAgreement(connection, Cluster.Manager.this);
+                        if (!schemaInAgreement)
                             logger.warn("No schema agreement from live replicas after {} s. The schema may not be up to date on some nodes.", configuration.getProtocolOptions().getMaxSchemaAgreementWaitSeconds());
                     } catch (Exception e) {
                         logger.warn("Error while waiting for schema agreement", e);
                     } finally {
-                        rs.getExecutionInfo().setReachedSchemaAgreement(reachedSchemaAgreement);
+                        rs.getExecutionInfo().setSchemaInAgreement(schemaInAgreement);
                         future.setResult(rs);
                     }
                 }

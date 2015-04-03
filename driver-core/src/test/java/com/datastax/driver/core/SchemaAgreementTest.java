@@ -38,14 +38,14 @@ public class SchemaAgreementTest {
     public void should_set_flag_on_successful_agreement() {
         protocolOptions.maxSchemaAgreementWaitSeconds = 10;
         ResultSet rs = session.execute(CREATE_TABLE);
-        assertThat(rs.getExecutionInfo().reachedSchemaAgreement()).isTrue();
+        assertThat(rs.getExecutionInfo().isSchemaInAgreement()).isTrue();
     }
 
     @Test(groups = "short")
     public void should_set_flag_on_non_schema_altering_statement() {
         protocolOptions.maxSchemaAgreementWaitSeconds = 10;
         ResultSet rs = session.execute("select release_version from system.local");
-        assertThat(rs.getExecutionInfo().reachedSchemaAgreement()).isTrue();
+        assertThat(rs.getExecutionInfo().isSchemaInAgreement()).isTrue();
     }
 
     @Test(groups = "short")
@@ -53,7 +53,7 @@ public class SchemaAgreementTest {
         // Setting to 0 results in no query being set, so agreement fails
         protocolOptions.maxSchemaAgreementWaitSeconds = 0;
         ResultSet rs = session.execute(CREATE_TABLE);
-        assertThat(rs.getExecutionInfo().reachedSchemaAgreement()).isFalse();
+        assertThat(rs.getExecutionInfo().isSchemaInAgreement()).isFalse();
     }
 
     @Test(groups = "short")

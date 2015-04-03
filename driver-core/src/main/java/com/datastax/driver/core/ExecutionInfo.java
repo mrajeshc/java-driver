@@ -27,7 +27,7 @@ public class ExecutionInfo {
     private final QueryTrace trace;
     private final ByteBuffer pagingState;
     private final Statement statement;
-    private volatile boolean reachedSchemaAgreement;
+    private volatile boolean schemaInAgreement;
 
     private ExecutionInfo(List<Host> triedHosts, ConsistencyLevel achievedConsistency, QueryTrace trace, ByteBuffer pagingState, Statement statement, boolean schemaAgreement) {
         this.triedHosts = triedHosts;
@@ -35,7 +35,7 @@ public class ExecutionInfo {
         this.trace = trace;
         this.pagingState = pagingState;
         this.statement = statement;
-        this.reachedSchemaAgreement = schemaAgreement;
+        this.schemaInAgreement = schemaAgreement;
     }
 
     ExecutionInfo(List<Host> triedHosts) {
@@ -43,19 +43,19 @@ public class ExecutionInfo {
     }
 
     ExecutionInfo withTrace(QueryTrace newTrace) {
-        return new ExecutionInfo(triedHosts, achievedConsistency, newTrace, pagingState, statement, reachedSchemaAgreement);
+        return new ExecutionInfo(triedHosts, achievedConsistency, newTrace, pagingState, statement, schemaInAgreement);
     }
 
     ExecutionInfo withAchievedConsistency(ConsistencyLevel newConsistency) {
-        return new ExecutionInfo(triedHosts, newConsistency, trace, pagingState, statement, reachedSchemaAgreement);
+        return new ExecutionInfo(triedHosts, newConsistency, trace, pagingState, statement, schemaInAgreement);
     }
 
     ExecutionInfo withPagingState(ByteBuffer pagingState) {
-        return new ExecutionInfo(triedHosts, achievedConsistency, trace, pagingState, statement, reachedSchemaAgreement);
+        return new ExecutionInfo(triedHosts, achievedConsistency, trace, pagingState, statement, schemaInAgreement);
     }
 
     ExecutionInfo withStatement(Statement statement) {
-        return new ExecutionInfo(triedHosts, achievedConsistency, trace, pagingState, statement, reachedSchemaAgreement);
+        return new ExecutionInfo(triedHosts, achievedConsistency, trace, pagingState, statement, schemaInAgreement);
     }
 
     /**
@@ -139,8 +139,7 @@ public class ExecutionInfo {
     }
 
     /**
-     * Whether the cluster reached schema agreement within a given delay after
-     * the execution of this query.
+     * Whether the cluster had reached schema agreement after the execution of this query.
      *
      * After a successful schema-altering query (ex: creating a table), the driver
      * will check if the cluster's nodes agree on the new schema version. If not,
@@ -156,11 +155,11 @@ public class ExecutionInfo {
      * @return whether the cluster reached schema agreement, or {@code true} for a non
      * schema-altering statement.
      */
-    public boolean reachedSchemaAgreement() {
-        return reachedSchemaAgreement;
+    public boolean isSchemaInAgreement() {
+        return schemaInAgreement;
     }
 
-    void setReachedSchemaAgreement(boolean schemaAgreement) {
-        this.reachedSchemaAgreement = schemaAgreement;
+    void setSchemaInAgreement(boolean schemaAgreement) {
+        this.schemaInAgreement = schemaAgreement;
     }
 }
